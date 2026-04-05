@@ -196,11 +196,20 @@ function LocationInventoryView({ location }: { location: Location }) {
                   type="number"
                   min="0"
                   placeholder="Set"
-                  className="w-14 border border-gray-200 rounded-lg px-2 py-1 text-xs text-center outline-none"
-                  onChange={(e) => {
+                  className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-xs text-center outline-none"
+                  onBlur={(e) => {
                     if (e.target.value !== "") {
                       handleSetInventory("jersey", size, e.target.value);
                       e.target.value = "";
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      const el = e.target as HTMLInputElement;
+                      if (el.value !== "") {
+                        handleSetInventory("jersey", size, el.value);
+                        el.value = "";
+                      }
                     }
                   }}
                 />
@@ -251,11 +260,20 @@ function LocationInventoryView({ location }: { location: Location }) {
                   type="number"
                   min="0"
                   placeholder="Set"
-                  className="w-14 border border-gray-200 rounded-lg px-2 py-1 text-xs text-center outline-none"
-                  onChange={(e) => {
+                  className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-xs text-center outline-none"
+                  onBlur={(e) => {
                     if (e.target.value !== "") {
                       handleSetInventory("hoodie", size, e.target.value);
                       e.target.value = "";
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      const el = e.target as HTMLInputElement;
+                      if (el.value !== "") {
+                        handleSetInventory("hoodie", size, el.value);
+                        el.value = "";
+                      }
                     }
                   }}
                 />

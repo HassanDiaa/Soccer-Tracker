@@ -21,20 +21,24 @@ export function SizeGrid({ sizes, selected, inventory, onToggle, location, cols 
         const qty = selected[size] || 0;
         const isSelected = qty > 0;
         const stock = inventory[size] ?? 0;
+        const isEmpty = stock === 0;
 
         return (
           <button
             key={size}
-            onClick={() => onToggle(size)}
+            onClick={() => !isEmpty && onToggle(size)}
+            disabled={isEmpty}
             className={[
               "relative flex flex-col items-center justify-center rounded-2xl font-bold transition-all duration-150 select-none aspect-square",
-              isSelected
-                ? `${colors.button} ${colors.buttonText} shadow-lg scale-95`
-                : "bg-white border-2 border-gray-200 text-gray-700 active:scale-95",
+              isEmpty
+                ? "bg-white border-2 border-gray-100 text-gray-300 opacity-40 cursor-not-allowed"
+                : isSelected
+                  ? `${colors.button} ${colors.buttonText} shadow-lg scale-95`
+                  : "bg-white border-2 border-gray-200 text-gray-700 active:scale-95",
             ].join(" ")}
           >
             <span className="text-xl font-extrabold leading-none">{size}</span>
-            <span className={`text-xs mt-1 font-semibold ${isSelected ? "opacity-80" : colors.text}`}>
+            <span className={`text-xs mt-1 font-semibold ${isSelected ? "opacity-80" : isEmpty ? "text-gray-300" : colors.text}`}>
               {stock} left
             </span>
             {isSelected && (
