@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Soccer Gear Tracker"
+version = "1.0.0"
+id = "artifacts/jersey-tracker"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22986
+
+[services.development]
+run = "pnpm --filter @workspace/jersey-tracker run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/jersey-tracker", "run", "build" ]
+publicDir = "artifacts/jersey-tracker/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22986"
+BASE_PATH = "/"
