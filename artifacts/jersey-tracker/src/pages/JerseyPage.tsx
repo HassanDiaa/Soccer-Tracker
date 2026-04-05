@@ -2,7 +2,6 @@ import { useState, useCallback } from "react";
 import {
   Location,
   LOCATION_COLORS,
-  LOCATIONS,
   JERSEY_SIZES,
   loadInventory,
   saveInventory,
@@ -18,6 +17,7 @@ export function JerseyPage() {
   const [pending, setPending] = useState<Record<string, number>>({});
   const [showConfirm, setShowConfirm] = useState(false);
   const [flash, setFlash] = useState(false);
+  const [inv, setInv] = useState(loadInventory);
 
   const colors = LOCATION_COLORS[location];
 
@@ -26,6 +26,7 @@ export function JerseyPage() {
     saveLastLocation(loc);
     setPending({});
     setShowConfirm(false);
+    setInv(loadInventory());
   };
 
   const handleToggle = useCallback((size: string) => {
@@ -46,12 +47,13 @@ export function JerseyPage() {
   };
 
   const handleConfirm = () => {
-    const inv = loadInventory();
+    const current = loadInventory();
     for (const [size, qty] of Object.entries(pending)) {
-      const current = inv[location].jersey[size] || 0;
-      inv[location].jersey[size] = Math.max(0, current - qty);
+      const stock = current[location].jersey[size] || 0;
+      current[location].jersey[size] = Math.max(0, stock - qty);
     }
-    saveInventory(inv);
+    saveInventory(current);
+    setInv(loadInventory());
     setPending({});
     setShowConfirm(false);
     setFlash(true);
@@ -79,7 +81,7 @@ export function JerseyPage() {
         <LocationTabs selected={location} onSelect={handleLocationChange} />
       </div>
 
-      <div className={`flex-1 ${colors.bg} px-4 py-3 flex flex-col gap-2 min-h-0`}>
+      <div className={`flex-1 ${colors.bg} px-4 py-3 flex flex-col gap-2`}>
         {flash && (
           <div className={`${colors.button} text-white text-sm font-bold text-center py-2 rounded-xl shadow animate-in fade-in duration-200`}>
             Inventory updated!
@@ -88,14 +90,14 @@ export function JerseyPage() {
         <p className={`text-xs font-medium ${colors.text} text-center`}>
           Tap a size to select — confirm when done
         </p>
-        <div className="flex-1 min-h-0">
-          <SizeGrid
-            sizes={JERSEY_SIZES}
-            selected={pending}
-            onToggle={handleToggle}
-            location={location}
-          />
-        </div>
+        <SizeGrid
+          sizes={JERSEY_SIZES}
+          selected={pending}
+          inventory={inv[location].jersey}
+          onToggle={handleToggle}
+          location={location}
+          cols={3}
+        />
       </div>
 
       {showConfirm && hasPending && (
