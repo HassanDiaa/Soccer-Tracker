@@ -7,6 +7,7 @@ import {
   HOODIE_SIZES,
   loadInventory,
   saveInventory,
+  loadGiven,
   loadAdminLastLocation,
   saveAdminLastLocation,
   loadAdminPassword,
@@ -156,6 +157,7 @@ function LocationInventoryView({ location }: { location: Location }) {
     setInv(loadInventory());
   };
 
+  const given = loadGiven();
   const jerseyTotal = JERSEY_SIZES.reduce((s, sz) => s + (inv[location].jersey[sz] || 0), 0);
   const hoodieTotal = HOODIE_SIZES.reduce((s, sz) => s + (inv[location].hoodie[sz] || 0), 0);
 
@@ -171,7 +173,7 @@ function LocationInventoryView({ location }: { location: Location }) {
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-bold text-gray-800 text-sm">Jerseys</h3>
           <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${colors.badge} ${colors.badgeText}`}>
-            {jerseyTotal} total
+            {jerseyTotal} in stock
           </span>
         </div>
         <div className="bg-white rounded-2xl overflow-hidden border border-gray-100">
@@ -181,9 +183,14 @@ function LocationInventoryView({ location }: { location: Location }) {
               className={`flex items-center px-4 py-2 gap-2 ${i !== JERSEY_SIZES.length - 1 ? "border-b border-gray-50" : ""}`}
             >
               <span className="text-sm font-bold text-gray-800 w-10">{size}</span>
-              <span className={`flex-1 text-sm font-semibold ${colors.text}`}>
-                {inv[location].jersey[size] ?? 0} in stock
-              </span>
+              <div className="flex-1 flex flex-col gap-0.5">
+                <span className={`text-xs font-semibold ${colors.text}`}>
+                  {inv[location].jersey[size] ?? 0} in stock
+                </span>
+                <span className="text-xs text-gray-400 font-medium">
+                  {given[location].jersey[size] ?? 0} given
+                </span>
+              </div>
               <div className="flex items-center gap-1">
                 <input
                   type="number"
@@ -221,7 +228,7 @@ function LocationInventoryView({ location }: { location: Location }) {
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-bold text-gray-800 text-sm">Hoodies</h3>
           <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${colors.badge} ${colors.badgeText}`}>
-            {hoodieTotal} total
+            {hoodieTotal} in stock
           </span>
         </div>
         <div className="bg-white rounded-2xl overflow-hidden border border-gray-100">
@@ -231,9 +238,14 @@ function LocationInventoryView({ location }: { location: Location }) {
               className={`flex items-center px-4 py-2 gap-2 ${i !== HOODIE_SIZES.length - 1 ? "border-b border-gray-50" : ""}`}
             >
               <span className="text-sm font-bold text-gray-800 w-10">{size}</span>
-              <span className={`flex-1 text-sm font-semibold ${colors.text}`}>
-                {inv[location].hoodie[size] ?? 0} in stock
-              </span>
+              <div className="flex-1 flex flex-col gap-0.5">
+                <span className={`text-xs font-semibold ${colors.text}`}>
+                  {inv[location].hoodie[size] ?? 0} in stock
+                </span>
+                <span className="text-xs text-gray-400 font-medium">
+                  {given[location].hoodie[size] ?? 0} given
+                </span>
+              </div>
               <div className="flex items-center gap-1">
                 <input
                   type="number"
@@ -272,32 +284,41 @@ function LocationInventoryView({ location }: { location: Location }) {
 
 function MasterView() {
   const inv = loadInventory();
+  const given = loadGiven();
 
   const jerseyBySize: Record<string, number> = {};
   const hoodieBySize: Record<string, number> = {};
+  const jerseyGivenBySize: Record<string, number> = {};
+  const hoodieGivenBySize: Record<string, number> = {};
 
   for (const sz of JERSEY_SIZES) {
     jerseyBySize[sz] = LOCATIONS.reduce((sum, loc) => sum + (inv[loc.id].jersey[sz] || 0), 0);
+    jerseyGivenBySize[sz] = LOCATIONS.reduce((sum, loc) => sum + (given[loc.id].jersey[sz] || 0), 0);
   }
   for (const sz of HOODIE_SIZES) {
     hoodieBySize[sz] = LOCATIONS.reduce((sum, loc) => sum + (inv[loc.id].hoodie[sz] || 0), 0);
+    hoodieGivenBySize[sz] = LOCATIONS.reduce((sum, loc) => sum + (given[loc.id].hoodie[sz] || 0), 0);
   }
 
   const jerseyTotal = Object.values(jerseyBySize).reduce((a, b) => a + b, 0);
   const hoodieTotal = Object.values(hoodieBySize).reduce((a, b) => a + b, 0);
+  const jerseyGivenTotal = Object.values(jerseyGivenBySize).reduce((a, b) => a + b, 0);
+  const hoodieGivenTotal = Object.values(hoodieGivenBySize).reduce((a, b) => a + b, 0);
 
   return (
     <div className="px-4 py-4 space-y-4">
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-4 text-white">
-        <p className="text-xs text-gray-400 mb-1">Total Inventory (All Locations)</p>
-        <div className="flex gap-6">
+        <p className="text-xs text-gray-400 mb-2">All Locations Summary</p>
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <p className="text-2xl font-bold">{jerseyTotal}</p>
-            <p className="text-xs text-gray-400">Jerseys</p>
+            <p className="text-xs text-gray-400">Jerseys in stock</p>
+            <p className="text-sm font-semibold text-gray-300 mt-0.5">{jerseyGivenTotal} given out</p>
           </div>
           <div>
             <p className="text-2xl font-bold">{hoodieTotal}</p>
-            <p className="text-xs text-gray-400">Hoodies</p>
+            <p className="text-xs text-gray-400">Hoodies in stock</p>
+            <p className="text-sm font-semibold text-gray-300 mt-0.5">{hoodieGivenTotal} given out</p>
           </div>
         </div>
       </div>
@@ -311,7 +332,7 @@ function MasterView() {
               className={`flex items-center px-4 py-2.5 ${i !== JERSEY_SIZES.length - 1 ? "border-b border-gray-50" : ""}`}
             >
               <span className="text-sm font-bold text-gray-800 w-10">{size}</span>
-              <div className="flex-1 flex gap-3">
+              <div className="flex-1 flex gap-1.5 flex-wrap">
                 {LOCATIONS.map((loc) => {
                   const colors = LOCATION_COLORS[loc.id];
                   return (
@@ -321,7 +342,10 @@ function MasterView() {
                   );
                 })}
               </div>
-              <span className="text-sm font-bold text-gray-900">{jerseyBySize[size]}</span>
+              <div className="text-right">
+                <p className="text-sm font-bold text-gray-900">{jerseyBySize[size]}</p>
+                <p className="text-xs text-gray-400">{jerseyGivenBySize[size]} given</p>
+              </div>
             </div>
           ))}
         </div>
@@ -336,7 +360,7 @@ function MasterView() {
               className={`flex items-center px-4 py-2.5 ${i !== HOODIE_SIZES.length - 1 ? "border-b border-gray-50" : ""}`}
             >
               <span className="text-sm font-bold text-gray-800 w-10">{size}</span>
-              <div className="flex-1 flex gap-3">
+              <div className="flex-1 flex gap-1.5 flex-wrap">
                 {LOCATIONS.map((loc) => {
                   const colors = LOCATION_COLORS[loc.id];
                   return (
@@ -346,7 +370,10 @@ function MasterView() {
                   );
                 })}
               </div>
-              <span className="text-sm font-bold text-gray-900">{hoodieBySize[size]}</span>
+              <div className="text-right">
+                <p className="text-sm font-bold text-gray-900">{hoodieBySize[size]}</p>
+                <p className="text-xs text-gray-400">{hoodieGivenBySize[size]} given</p>
+              </div>
             </div>
           ))}
         </div>

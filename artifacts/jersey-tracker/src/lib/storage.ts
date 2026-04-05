@@ -16,9 +16,57 @@ export type HoodieSize = (typeof HOODIE_SIZES)[number];
 export type Inventory = Record<string, number>;
 
 const INVENTORY_KEY = "gear_inventory_v2";
+const GIVEN_KEY = "gear_given_v1";
 const LOCATION_KEY = "last_location_v2";
 const ADMIN_TAB_KEY = "admin_last_location_v2";
 const ADMIN_PASSWORD_KEY = "admin_password_v1";
+
+function getDefaultGiven(): Record<Location, { jersey: Inventory; hoodie: Inventory }> {
+  const obj: Record<string, { jersey: Inventory; hoodie: Inventory }> = {};
+  for (const loc of LOCATIONS) {
+    const jerseys: Inventory = {};
+    for (const s of JERSEY_SIZES) jerseys[s] = 0;
+    const hoodies: Inventory = {};
+    for (const s of HOODIE_SIZES) hoodies[s] = 0;
+    obj[loc.id] = { jersey: jerseys, hoodie: hoodies };
+  }
+  return obj as Record<Location, { jersey: Inventory; hoodie: Inventory }>;
+}
+
+export function loadGiven(): Record<Location, { jersey: Inventory; hoodie: Inventory }> {
+  try {
+    const raw = localStorage.getItem(GIVEN_KEY);
+    if (!raw) return getDefaultGiven();
+    const parsed = JSON.parse(raw);
+    const defaults = getDefaultGiven();
+    for (const loc of LOCATIONS) {
+      if (!parsed[loc.id]) parsed[loc.id] = defaults[loc.id];
+      if (!parsed[loc.id].jersey) parsed[loc.id].jersey = defaults[loc.id].jersey;
+      if (!parsed[loc.id].hoodie) parsed[loc.id].hoodie = defaults[loc.id].hoodie;
+      for (const s of JERSEY_SIZES) {
+        if (typeof parsed[loc.id].jersey[s] !== "number") parsed[loc.id].jersey[s] = 0;
+      }
+      for (const s of HOODIE_SIZES) {
+        if (typeof parsed[loc.id].hoodie[s] !== "number") parsed[loc.id].hoodie[s] = 0;
+      }
+    }
+    return parsed;
+  } catch {
+    return getDefaultGiven();
+  }
+}
+
+export function addGiven(
+  location: Location,
+  type: "jersey" | "hoodie",
+  sizes: Record<string, number>
+) {
+  const given = loadGiven();
+  for (const [size, qty] of Object.entries(sizes)) {
+    given[location][type][size] = (given[location][type][size] || 0) + qty;
+  }
+  localStorage.setItem(GIVEN_KEY, JSON.stringify(given));
+}
 
 export function loadAdminPassword(): string {
   try {

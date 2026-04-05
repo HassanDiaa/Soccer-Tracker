@@ -5,6 +5,7 @@ import {
   JERSEY_SIZES,
   loadInventory,
   saveInventory,
+  addGiven,
   loadLastLocation,
   saveLastLocation,
 } from "@/lib/storage";
@@ -53,6 +54,7 @@ export function JerseyPage() {
       current[location].jersey[size] = Math.max(0, stock - qty);
     }
     saveInventory(current);
+    addGiven(location, "jersey", pending);
     setInv(loadInventory());
     setPending({});
     setShowConfirm(false);

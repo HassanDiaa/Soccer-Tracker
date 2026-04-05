@@ -5,6 +5,7 @@ import {
   HOODIE_SIZES,
   loadInventory,
   saveInventory,
+  addGiven,
   loadLastLocation,
   saveLastLocation,
 } from "@/lib/storage";
@@ -53,6 +54,7 @@ export function HoodiePage() {
       current[location].hoodie[size] = Math.max(0, stock - qty);
     }
     saveInventory(current);
+    addGiven(location, "hoodie", pending);
     setInv(loadInventory());
     setPending({});
     setShowConfirm(false);
