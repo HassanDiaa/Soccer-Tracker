@@ -78,7 +78,7 @@ export function HoodiePage() {
         <LocationTabs selected={location} onSelect={handleLocationChange} />
       </div>
 
-      <div className={`flex-1 ${colors.bg} px-4 py-4 flex flex-col gap-3`}>
+      <div className={`flex-1 ${colors.bg} px-4 py-3 flex flex-col gap-2 min-h-0`}>
         {flash && (
           <div className={`${colors.button} text-white text-sm font-bold text-center py-2 rounded-xl shadow animate-in fade-in duration-200`}>
             Inventory updated!
@@ -87,12 +87,14 @@ export function HoodiePage() {
         <p className={`text-xs font-medium ${colors.text} text-center`}>
           Tap a size to select — confirm when done
         </p>
-        <SizeGrid
-          sizes={HOODIE_SIZES}
-          selected={pending}
-          onToggle={handleToggle}
-          location={location}
-        />
+        <div className="flex-1 min-h-0">
+          <SizeGrid
+            sizes={HOODIE_SIZES}
+            selected={pending}
+            onToggle={handleToggle}
+            location={location}
+          />
+        </div>
       </div>
 
       {showConfirm && hasPending && (

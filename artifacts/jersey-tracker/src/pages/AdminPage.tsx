@@ -9,17 +9,17 @@ import {
   saveInventory,
   loadAdminLastLocation,
   saveAdminLastLocation,
+  loadAdminPassword,
+  saveAdminPassword,
 } from "@/lib/storage";
 import { LocationTabs } from "@/components/LocationTabs";
-
-const ADMIN_PASSWORD = "admin123";
 
 function AdminLogin({ onLogin }: { onLogin: () => void }) {
   const [pw, setPw] = useState("");
   const [error, setError] = useState(false);
 
   const handle = () => {
-    if (pw === ADMIN_PASSWORD) {
+    if (pw === loadAdminPassword()) {
       onLogin();
     } else {
       setError(true);
@@ -54,10 +54,74 @@ function AdminLogin({ onLogin }: { onLogin: () => void }) {
   );
 }
 
-type BulkField = {
-  size: string;
-  value: string;
-};
+function ChangePasswordSection() {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  const handle = () => {
+    setError("");
+    setSuccess(false);
+    if (current !== loadAdminPassword()) {
+      setError("Current password is incorrect.");
+      return;
+    }
+    if (next.length < 4) {
+      setError("New password must be at least 4 characters.");
+      return;
+    }
+    if (next !== confirm) {
+      setError("Passwords do not match.");
+      return;
+    }
+    saveAdminPassword(next);
+    setCurrent("");
+    setNext("");
+    setConfirm("");
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 2500);
+  };
+
+  return (
+    <div className="px-4 py-4">
+      <h3 className="font-bold text-gray-800 text-sm mb-3">Change Password</h3>
+      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-2">
+        <input
+          type="password"
+          value={current}
+          onChange={(e) => { setCurrent(e.target.value); setError(""); }}
+          placeholder="Current password"
+          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gray-400 transition-colors"
+        />
+        <input
+          type="password"
+          value={next}
+          onChange={(e) => { setNext(e.target.value); setError(""); }}
+          placeholder="New password"
+          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gray-400 transition-colors"
+        />
+        <input
+          type="password"
+          value={confirm}
+          onChange={(e) => { setConfirm(e.target.value); setError(""); }}
+          placeholder="Confirm new password"
+          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gray-400 transition-colors"
+          onKeyDown={(e) => e.key === "Enter" && handle()}
+        />
+        {error && <p className="text-red-500 text-xs">{error}</p>}
+        {success && <p className="text-green-600 text-xs font-semibold">Password updated successfully!</p>}
+        <button
+          onClick={handle}
+          className="w-full bg-gray-900 text-white font-bold py-2.5 rounded-xl text-sm active:scale-95 transition-transform mt-1"
+        >
+          Update Password
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function LocationInventoryView({ location }: { location: Location }) {
   const colors = LOCATION_COLORS[location];
@@ -293,7 +357,7 @@ function MasterView() {
 
 export function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false);
-  const [activeTab, setActiveTab] = useState<"master" | "location">("master");
+  const [activeTab, setActiveTab] = useState<"master" | "location" | "settings">("master");
   const [location, setLocation] = useState<Location>(loadAdminLastLocation);
 
   const colors = LOCATION_COLORS[location];
@@ -332,13 +396,19 @@ export function AdminPage() {
           >
             By Location
           </button>
+          <button
+            onClick={() => setActiveTab("settings")}
+            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeTab === "settings" ? "bg-white text-gray-900" : "bg-gray-800 text-gray-400"}`}
+          >
+            Settings
+          </button>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto bg-gray-50 no-scrollbar">
-        {activeTab === "master" ? (
-          <MasterView />
-        ) : (
+        {activeTab === "master" && <MasterView />}
+        {activeTab === "settings" && <ChangePasswordSection />}
+        {activeTab === "location" && (
           <>
             <div className={`${colors.header} px-4 pt-3 pb-0`}>
               <LocationTabs selected={location} onSelect={handleLocationChange} />

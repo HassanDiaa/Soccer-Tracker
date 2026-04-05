@@ -18,6 +18,19 @@ export type Inventory = Record<string, number>;
 const INVENTORY_KEY = "gear_inventory_v2";
 const LOCATION_KEY = "last_location_v2";
 const ADMIN_TAB_KEY = "admin_last_location_v2";
+const ADMIN_PASSWORD_KEY = "admin_password_v1";
+
+export function loadAdminPassword(): string {
+  try {
+    return localStorage.getItem(ADMIN_PASSWORD_KEY) || "admin123";
+  } catch {
+    return "admin123";
+  }
+}
+
+export function saveAdminPassword(pw: string) {
+  localStorage.setItem(ADMIN_PASSWORD_KEY, pw);
+}
 
 function getDefaultInventory(): Record<Location, { jersey: Inventory; hoodie: Inventory }> {
   const obj: Record<string, { jersey: Inventory; hoodie: Inventory }> = {};
