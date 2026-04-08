@@ -1,19 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Location,
   LOCATION_COLORS,
   LOCATIONS,
   JERSEY_SIZES,
   HOODIE_SIZES,
-  loadInventory,
-  saveInventory,
-  loadGiven,
   loadAdminLastLocation,
   saveAdminLastLocation,
   loadAdminPassword,
   saveAdminPassword,
 } from "@/lib/storage";
+import { fetchInventory, fetchGiven, setInventory, addInventory } from "@/lib/api";
 import { LocationTabs } from "@/components/LocationTabs";
+
+type InventoryMap = Record<string, { jersey: Record<string, number>; hoodie: Record<string, number> }>;
 
 function AdminLogin({ onLogin }: { onLogin: () => void }) {
   const [pw, setPw] = useState("");
@@ -126,40 +126,50 @@ function ChangePasswordSection() {
 
 function LocationInventoryView({ location }: { location: Location }) {
   const colors = LOCATION_COLORS[location];
-  const [inv, setInv] = useState(loadInventory);
+  const [inv, setInv] = useState<InventoryMap>({});
+  const [given, setGiven] = useState<InventoryMap>({});
   const [bulkJersey, setBulkJersey] = useState<Record<string, string>>({});
   const [bulkHoodie, setBulkHoodie] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
 
-  const handleBulkSave = (type: "jersey" | "hoodie") => {
-    const current = loadInventory();
+  const load = useCallback(async () => {
+    const [invData, givenData] = await Promise.all([fetchInventory(), fetchGiven()]);
+    setInv(invData);
+    setGiven(givenData);
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load, location]);
+
+  const handleBulkSave = async (type: "jersey" | "hoodie") => {
     const bulk = type === "jersey" ? bulkJersey : bulkHoodie;
     const setBulk = type === "jersey" ? setBulkJersey : setBulkHoodie;
+    const sizes: Record<string, number> = {};
     for (const [size, val] of Object.entries(bulk)) {
       const n = parseInt(val, 10);
-      if (!isNaN(n) && n >= 0) {
-        current[location][type][size] = (current[location][type][size] || 0) + n;
-      }
+      if (!isNaN(n) && n > 0) sizes[size] = n;
     }
-    saveInventory(current);
-    setInv(loadInventory());
+    if (Object.keys(sizes).length > 0) {
+      await addInventory(location, type, sizes);
+    }
     setBulk({});
+    await load();
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
   };
 
-  const handleSetInventory = (type: "jersey" | "hoodie", size: string, val: string) => {
+  const handleSetInventory = async (type: "jersey" | "hoodie", size: string, val: string) => {
     const n = parseInt(val, 10);
     if (isNaN(n) || n < 0) return;
-    const current = loadInventory();
-    current[location][type][size] = n;
-    saveInventory(current);
-    setInv(loadInventory());
+    await setInventory(location, type, size, n);
+    await load();
   };
 
-  const given = loadGiven();
-  const jerseyTotal = JERSEY_SIZES.reduce((s, sz) => s + (inv[location].jersey[sz] || 0), 0);
-  const hoodieTotal = HOODIE_SIZES.reduce((s, sz) => s + (inv[location].hoodie[sz] || 0), 0);
+  const locInv = inv[location] ?? { jersey: {}, hoodie: {} };
+  const locGiven = given[location] ?? { jersey: {}, hoodie: {} };
+  const jerseyTotal = JERSEY_SIZES.reduce((s, sz) => s + (locInv.jersey[sz] || 0), 0);
+  const hoodieTotal = HOODIE_SIZES.reduce((s, sz) => s + (locInv.hoodie[sz] || 0), 0);
 
   return (
     <div className="px-4 py-4 space-y-5">
@@ -185,10 +195,10 @@ function LocationInventoryView({ location }: { location: Location }) {
               <span className="text-sm font-bold text-gray-800 w-10">{size}</span>
               <div className="flex-1 flex flex-col gap-0.5">
                 <span className={`text-xs font-semibold ${colors.text}`}>
-                  {inv[location].jersey[size] ?? 0} in stock
+                  {locInv.jersey[size] ?? 0} in stock
                 </span>
                 <span className="text-xs text-gray-400 font-medium">
-                  {given[location].jersey[size] ?? 0} given
+                  {locGiven.jersey[size] ?? 0} given
                 </span>
               </div>
               <div className="flex items-center gap-1">
@@ -206,10 +216,7 @@ function LocationInventoryView({ location }: { location: Location }) {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       const el = e.target as HTMLInputElement;
-                      if (el.value !== "") {
-                        handleSetInventory("jersey", size, el.value);
-                        el.value = "";
-                      }
+                      if (el.value !== "") { handleSetInventory("jersey", size, el.value); el.value = ""; }
                     }
                   }}
                 />
@@ -249,10 +256,10 @@ function LocationInventoryView({ location }: { location: Location }) {
               <span className="text-sm font-bold text-gray-800 w-10">{size}</span>
               <div className="flex-1 flex flex-col gap-0.5">
                 <span className={`text-xs font-semibold ${colors.text}`}>
-                  {inv[location].hoodie[size] ?? 0} in stock
+                  {locInv.hoodie[size] ?? 0} in stock
                 </span>
                 <span className="text-xs text-gray-400 font-medium">
-                  {given[location].hoodie[size] ?? 0} given
+                  {locGiven.hoodie[size] ?? 0} given
                 </span>
               </div>
               <div className="flex items-center gap-1">
@@ -270,10 +277,7 @@ function LocationInventoryView({ location }: { location: Location }) {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       const el = e.target as HTMLInputElement;
-                      if (el.value !== "") {
-                        handleSetInventory("hoodie", size, el.value);
-                        el.value = "";
-                      }
+                      if (el.value !== "") { handleSetInventory("hoodie", size, el.value); el.value = ""; }
                     }
                   }}
                 />
@@ -301,8 +305,20 @@ function LocationInventoryView({ location }: { location: Location }) {
 }
 
 function MasterView() {
-  const inv = loadInventory();
-  const given = loadGiven();
+  const [inv, setInv] = useState<InventoryMap>({});
+  const [given, setGiven] = useState<InventoryMap>({});
+
+  const load = useCallback(async () => {
+    const [invData, givenData] = await Promise.all([fetchInventory(), fetchGiven()]);
+    setInv(invData);
+    setGiven(givenData);
+  }, []);
+
+  useEffect(() => {
+    load();
+    const interval = setInterval(load, 15000);
+    return () => clearInterval(interval);
+  }, [load]);
 
   const jerseyBySize: Record<string, number> = {};
   const hoodieBySize: Record<string, number> = {};
@@ -310,12 +326,12 @@ function MasterView() {
   const hoodieGivenBySize: Record<string, number> = {};
 
   for (const sz of JERSEY_SIZES) {
-    jerseyBySize[sz] = LOCATIONS.reduce((sum, loc) => sum + (inv[loc.id].jersey[sz] || 0), 0);
-    jerseyGivenBySize[sz] = LOCATIONS.reduce((sum, loc) => sum + (given[loc.id].jersey[sz] || 0), 0);
+    jerseyBySize[sz] = LOCATIONS.reduce((sum, loc) => sum + (inv[loc.id]?.jersey[sz] || 0), 0);
+    jerseyGivenBySize[sz] = LOCATIONS.reduce((sum, loc) => sum + (given[loc.id]?.jersey[sz] || 0), 0);
   }
   for (const sz of HOODIE_SIZES) {
-    hoodieBySize[sz] = LOCATIONS.reduce((sum, loc) => sum + (inv[loc.id].hoodie[sz] || 0), 0);
-    hoodieGivenBySize[sz] = LOCATIONS.reduce((sum, loc) => sum + (given[loc.id].hoodie[sz] || 0), 0);
+    hoodieBySize[sz] = LOCATIONS.reduce((sum, loc) => sum + (inv[loc.id]?.hoodie[sz] || 0), 0);
+    hoodieGivenBySize[sz] = LOCATIONS.reduce((sum, loc) => sum + (given[loc.id]?.hoodie[sz] || 0), 0);
   }
 
   const jerseyTotal = Object.values(jerseyBySize).reduce((a, b) => a + b, 0);
@@ -355,7 +371,7 @@ function MasterView() {
                   const colors = LOCATION_COLORS[loc.id];
                   return (
                     <span key={loc.id} className={`text-xs font-semibold px-1.5 py-0.5 rounded-md ${colors.badge} ${colors.badgeText}`}>
-                      {loc.name.split(" ")[0]}: {inv[loc.id].jersey[size] || 0}
+                      {loc.name.split(" ")[0]}: {inv[loc.id]?.jersey[size] || 0}
                     </span>
                   );
                 })}
@@ -383,7 +399,7 @@ function MasterView() {
                   const colors = LOCATION_COLORS[loc.id];
                   return (
                     <span key={loc.id} className={`text-xs font-semibold px-1.5 py-0.5 rounded-md ${colors.badge} ${colors.badgeText}`}>
-                      {loc.name.split(" ")[0]}: {inv[loc.id].hoodie[size] || 0}
+                      {loc.name.split(" ")[0]}: {inv[loc.id]?.hoodie[size] || 0}
                     </span>
                   );
                 })}

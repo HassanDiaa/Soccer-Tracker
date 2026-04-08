@@ -1,24 +1,37 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Location,
   LOCATION_COLORS,
   JERSEY_SIZES,
-  loadInventory,
-  saveInventory,
-  addGiven,
   loadLastLocation,
   saveLastLocation,
 } from "@/lib/storage";
+import { fetchInventory, confirmSizes } from "@/lib/api";
 import { LocationTabs } from "@/components/LocationTabs";
 import { SizeGrid } from "@/components/SizeGrid";
 import { ConfirmDrawer } from "@/components/ConfirmDrawer";
+
+type InventoryMap = Record<string, { jersey: Record<string, number>; hoodie: Record<string, number> }>;
 
 export function JerseyPage() {
   const [location, setLocation] = useState<Location>(loadLastLocation);
   const [pending, setPending] = useState<Record<string, number>>({});
   const [showConfirm, setShowConfirm] = useState(false);
   const [flash, setFlash] = useState(false);
-  const [inv, setInv] = useState(loadInventory);
+  const [inv, setInv] = useState<InventoryMap>({});
+  const [loading, setLoading] = useState(true);
+
+  const loadInv = useCallback(async () => {
+    const data = await fetchInventory();
+    setInv(data);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    loadInv();
+    const interval = setInterval(loadInv, 10000);
+    return () => clearInterval(interval);
+  }, [loadInv]);
 
   const colors = LOCATION_COLORS[location];
 
@@ -27,7 +40,6 @@ export function JerseyPage() {
     saveLastLocation(loc);
     setPending({});
     setShowConfirm(false);
-    setInv(loadInventory());
   };
 
   const handleToggle = useCallback((size: string) => {
@@ -47,15 +59,10 @@ export function JerseyPage() {
     });
   };
 
-  const handleConfirm = () => {
-    const current = loadInventory();
-    for (const [size, qty] of Object.entries(pending)) {
-      const stock = current[location].jersey[size] || 0;
-      current[location].jersey[size] = Math.max(0, stock - qty);
-    }
-    saveInventory(current);
-    addGiven(location, "jersey", pending);
-    setInv(loadInventory());
+  const handleConfirm = async () => {
+    await confirmSizes(location, "jersey", pending);
+    const data = await fetchInventory();
+    setInv(data);
     setPending({});
     setShowConfirm(false);
     setFlash(true);
@@ -68,6 +75,7 @@ export function JerseyPage() {
   };
 
   const hasPending = Object.values(pending).some((v) => v > 0);
+  const jerseyInv = inv[location]?.jersey ?? {};
 
   return (
     <div className="flex flex-col h-full">
@@ -90,12 +98,12 @@ export function JerseyPage() {
           </div>
         )}
         <p className={`text-xs font-medium ${colors.text} text-center`}>
-          Tap a size to select — confirm when done
+          {loading ? "Loading inventory…" : "Tap a size to select — confirm when done"}
         </p>
         <SizeGrid
           sizes={JERSEY_SIZES}
           selected={pending}
-          inventory={inv[location].jersey}
+          inventory={jerseyInv}
           onToggle={handleToggle}
           location={location}
           cols={3}

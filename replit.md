@@ -7,14 +7,19 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 ## Artifacts
 
 ### Soccer Gear Tracker (`artifacts/jersey-tracker`)
-- React + Vite frontend-only app (no backend — all data stored in localStorage)
+- React + Vite frontend — connects to shared API server for collaborative real-time inventory
 - Mobile-optimized inventory tracker for soccer jersey and hoodie giveouts
 - Three locations: Irvine (teal), Garden Grove (orange), Yorba Linda (golden/olive)
-- Coach view: size selection buttons with confirmation drawer before recording
-- Admin view (password: admin123): per-location inventory management + master totals view + bulk order entry
-- Jersey sizes: 4XS, 3XS, 2XS, XS, S, M, L, XL, 2XL
-- Hoodie sizes: S, M, L, XL, 2XL, 3XL
-- Last selected location is persisted per-device
+- Coach view: size selection buttons with confirmation drawer before recording; auto-refreshes every 10s
+- Admin view (password stored in localStorage, default admin123): per-location + master totals, bulk order, given counter, change password
+- Jersey sizes: 4XS, 3XS, 2XS, XS, S, M, L, XL, 2XL (3×3 grid)
+- Hoodie sizes: S, M, L, XL, 2XL, 3XL (3×2 grid)
+- Last selected location persisted per-device via localStorage
+
+### API Server (`artifacts/api-server`)
+- Express 5 + TypeScript, connects to PostgreSQL
+- Routes: GET /api/inventory, GET /api/given, POST /api/inventory/confirm, PUT /api/inventory/set, POST /api/inventory/add
+- DB tables: `inventory` and `given` (both keyed by location, gear_type, size)
 
 ## Stack
 
