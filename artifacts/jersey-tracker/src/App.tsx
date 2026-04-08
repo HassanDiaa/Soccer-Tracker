@@ -15,7 +15,7 @@ export default function App() {
   ];
 
   return (
-    <div className="flex flex-col h-screen max-w-sm mx-auto bg-white overflow-hidden">
+    <div className="flex flex-col h-dvh max-w-sm mx-auto bg-white overflow-hidden">
       <div className="flex-1 overflow-y-auto no-scrollbar">
         {tab === "jersey" && <JerseyPage />}
         {tab === "hoodie" && <HoodiePage />}
